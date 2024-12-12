@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>UUID V4 Generator</title>
+    <title>Advanced UUID V4 Generator</title>
     <link rel="stylesheet" href="../css/styles.css">
     <style>
         .tool-container {
@@ -11,7 +11,7 @@
             border-radius: 8px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
             padding: 20px;
-            max-width: 500px;
+            max-width: 600px;
             margin: 0 auto;
         }
         #uuid-display {
@@ -22,20 +22,90 @@
             font-size: 18px;
             word-break: break-all;
         }
+        .advanced-options {
+            display: grid;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        .option-input {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .option-input input[type="text"] {
+            flex-grow: 1;
+            padding: 5px;
+        }
+        .option-input select {
+            padding: 5px;
+        }
+        .help-text {
+            color: #666;
+            font-size: 0.8em;
+            margin-top: 5px;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>UUID V4 Generator</h1>
+            <h1>Advanced UUID V4 Generator</h1>
             <a href="../index.html" class="btn">Back to Tools</a>
         </header>
 
         <div class="tool-container">
+            <div class="advanced-options">
+                <div class="option-input">
+                    <label>Segment 1:</label>
+                    <input type="text" id="segment1" value="********" placeholder="Static or *">
+                    <select id="segment1-type">
+                        <option value="static">Static</option>
+                        <option value="random">Random</option>
+                    </select>
+                </div>
+                <div class="option-input">
+                    <label>Segment 2:</label>
+                    <input type="text" id="segment2" value="****" placeholder="Static or *">
+                    <select id="segment2-type">
+                        <option value="random">Random</option>
+                        <option value="static">Static</option>
+                    </select>
+                </div>
+                <div class="option-input">
+                    <label>Segment 3:</label>
+                    <input type="text" id="segment3" value="****" placeholder="Static or *">
+                    <select id="segment3-type">
+                        <option value="random">Random</option>
+                        <option value="static">Static</option>
+                    </select>
+                </div>
+                <div class="option-input">
+                    <label>Segment 4:</label>
+                    <input type="text" id="segment4" value="****" placeholder="Static or *">
+                    <select id="segment4-type">
+                        <option value="random">Random</option>
+                        <option value="static">Static</option>
+                    </select>
+                </div>
+                <div class="option-input">
+                    <label>Segment 5:</label>
+                    <input type="text" id="segment5" value="************" placeholder="Static or *">
+                    <select id="segment5-type">
+                        <option value="random">Random</option>
+                        <option value="static">Static</option>
+                    </select>
+                </div>
+            </div>
+
             <div id="uuid-display">Click Generate to create a UUID</div>
             <div>
                 <button onclick="generateUUID()" class="btn">Generate UUID</button>
                 <button onclick="copyUUID()" class="btn">Copy UUID</button>
+            </div>
+            <div class="help-text">
+                • Use * for random generation
+                • Enter static hex values (0-9, a-f)
+                • Static values must be correct hex length for the segment
             </div>
         </div>
     </div>
@@ -47,27 +117,56 @@
             return array;
         }
 
+        function padOrTruncate(input, length, isRandom) {
+            if (isRandom) {
+                // Generate random hex for the specified length
+                return Array.from(generateRandomBytes(length/2))
+                    .map(b => b.toString(16).padStart(2, '0'))
+                    .join('')
+                    .slice(0, length);
+            }
+            
+            // Remove any non-hex characters
+            input = input.toLowerCase().replace(/[^0-9a-f]/g, '');
+            
+            // Pad or truncate
+            if (input.length > length) {
+                return input.slice(0, length);
+            }
+            if (input.length < length) {
+                return input.padStart(length, '0');
+            }
+            return input;
+        }
+
         function generateUUID() {
-            const uuid = new Uint8Array(16);
-            uuid[0] = 0x20;
-            uuid[1] = 0x20;
-            uuid[2] = 0x20;
-            uuid[3] = 0x20;
+            // Get segment values and types
+            const segments = [
+                { value: document.getElementById('segment1').value, type: document.getElementById('segment1-type').value },
+                { value: document.getElementById('segment2').value, type: document.getElementById('segment2-type').value },
+                { value: document.getElementById('segment3').value, type: document.getElementById('segment3-type').value },
+                { value: document.getElementById('segment4').value, type: document.getElementById('segment4-type').value },
+                { value: document.getElementById('segment5').value, type: document.getElementById('segment5-type').value }
+            ];
 
-            const randomBytes = generateRandomBytes(12);
-            uuid.set(randomBytes, 4);
+            // Segment lengths for a standard UUID
+            const segmentLengths = [8, 4, 4, 4, 12];
 
-            uuid[6] = (uuid[6] & 0x0F) | 0x40;
-            uuid[8] = (uuid[8] & 0x3F) | 0x80;
+            // Generate UUID segments
+            const uuidSegments = segments.map((seg, index) => {
+                const isRandom = seg.type === 'random' || seg.value.includes('*');
+                return padOrTruncate(seg.value, segmentLengths[index], isRandom);
+            });
 
-            const uuidStr = Array.from(uuid)
-                .map(b => b.toString(16).padStart(2, '0'))
-                .reduce((acc, hex, index) => {
-                    if (index === 4 || index === 6 || index === 8 || index === 10) {
-                        return acc + '-' + hex;
-                    }
-                    return acc + hex;
-                }, '');
+            // Combine segments
+            const uuidStr = uuidSegments.join('-');
+
+            // Validate UUID format
+            const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+            if (!uuidRegex.test(uuidStr)) {
+                alert('Invalid UUID format. Please check your inputs.');
+                return;
+            }
 
             document.getElementById('uuid-display').textContent = uuidStr;
         }
