@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UUID V4 Generator</title>
+    <link rel="stylesheet" href="../css/styles.css">
+    <style>
+        .tool-container {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            padding: 20px;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+        #uuid-display {
+            background-color: #f4f4f4;
+            border: 2px solid #3498db;
+            padding: 10px;
+            margin: 20px 0;
+            font-size: 18px;
+            word-break: break-all;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>UUID V4 Generator</h1>
+            <a href="../index.html" class="btn">Back to Tools</a>
+        </header>
+
+        <div class="tool-container">
+            <div id="uuid-display">Click Generate to create a UUID</div>
+            <div>
+                <button onclick="generateUUID()" class="btn">Generate UUID</button>
+                <button onclick="copyUUID()" class="btn">Copy UUID</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function generateRandomBytes(length) {
+            const array = new Uint8Array(length);
+            crypto.getRandomValues(array);
+            return array;
+        }
+
+        function generateUUID() {
+            const uuid = new Uint8Array(16);
+            uuid[0] = 0x20;
+            uuid[1] = 0x20;
+            uuid[2] = 0x20;
+            uuid[3] = 0x20;
+
+            const randomBytes = generateRandomBytes(12);
+            uuid.set(randomBytes, 4);
+
+            uuid[6] = (uuid[6] & 0x0F) | 0x40;
+            uuid[8] = (uuid[8] & 0x3F) | 0x80;
+
+            const uuidStr = Array.from(uuid)
+                .map(b => b.toString(16).padStart(2, '0'))
+                .reduce((acc, hex, index) => {
+                    if (index === 4 || index === 6 || index === 8 || index === 10) {
+                        return acc + '-' + hex;
+                    }
+                    return acc + hex;
+                }, '');
+
+            document.getElementById('uuid-display').textContent = uuidStr;
+        }
+
+        function copyUUID() {
+            const uuidText = document.getElementById('uuid-display').textContent;
+            
+            if (uuidText === 'Click Generate to create a UUID') {
+                return;
+            }
+
+            navigator.clipboard.writeText(uuidText).then(() => {
+                alert('UUID copied to clipboard!');
+            }).catch(err => {
+                console.error('Failed to copy: ', err);
+                alert('Copy failed. Please try again.');
+            });
+        }
+    </script>
+</body>
+</html>
